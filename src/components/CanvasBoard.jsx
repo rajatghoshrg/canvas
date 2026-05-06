@@ -132,6 +132,25 @@ const CanvasBoard = forwardRef(
       ]);
     };
 
+    const getCoordinates = (e) => {
+      const canvas = canvasRef.current;
+
+      const rect =
+        canvas.getBoundingClientRect();
+
+      return {
+        x:
+          ((e.clientX - rect.left) /
+            rect.width) *
+          canvas.width,
+
+        y:
+          ((e.clientY - rect.top) /
+            rect.height) *
+          canvas.height,
+      };
+    };
+
     // Start Drawing
     const startDrawing = (e) => {
       const canvas = canvasRef.current;
@@ -143,10 +162,11 @@ const CanvasBoard = forwardRef(
 
       ctx.beginPath();
 
-      ctx.moveTo(
-        e.nativeEvent.offsetX,
-        e.nativeEvent.offsetY
+      const { x, y } = getCoordinates(
+        e.nativeEvent
       );
+
+      ctx.moveTo(x, y);
     };
 
     // Draw
@@ -166,9 +186,13 @@ const CanvasBoard = forwardRef(
       const ctx =
         canvas.getContext("2d");
 
+      const { x, y } = getCoordinates(
+        e.nativeEvent
+      );
+
       setCursorPosition({
-        x: e.nativeEvent.offsetX,
-        y: e.nativeEvent.offsetY,
+        x,
+        y,
       });
 
       ctx.lineWidth = brushSize;
@@ -182,10 +206,7 @@ const CanvasBoard = forwardRef(
           ? boardColor
           : brushColor;
 
-      ctx.lineTo(
-        e.nativeEvent.offsetX,
-        e.nativeEvent.offsetY
-      );
+      ctx.lineTo(x, y);
 
       ctx.stroke();
     };
@@ -208,8 +229,8 @@ const CanvasBoard = forwardRef(
 
       const fakeEvent = {
         nativeEvent: {
-          offsetX: touch.clientX - rect.left,
-          offsetY: touch.clientY - rect.top,
+          clientX: touch.clientX,
+          clientY: touch.clientY,
         },
       };
 
@@ -234,8 +255,8 @@ const CanvasBoard = forwardRef(
 
       const fakeEvent = {
         nativeEvent: {
-          offsetX: touch.clientX - rect.left,
-          offsetY: touch.clientY - rect.top,
+          clientX: touch.clientX,
+          clientY: touch.clientY,
         },
       };
 
@@ -393,11 +414,14 @@ const CanvasBoard = forwardRef(
     }, []);
 
     const handleMouseMove = (e) => {
-      setCursorPosition({
-        x: e.nativeEvent.offsetX,
-        y: e.nativeEvent.offsetY,
-      });
+      const { x, y } = getCoordinates(
+        e.nativeEvent
+      );
 
+      setCursorPosition({
+        x,
+        y,
+      });
       draw(e);
     };
 
