@@ -51,7 +51,10 @@ const CanvasBoard = forwardRef(
           container.offsetWidth;
 
         canvas.height =
-          window.innerHeight * 0.75;
+          Math.min(
+            window.innerHeight * 0.75,
+            700
+          );
 
         // Fill background
         ctx.fillStyle = boardColor;
@@ -191,6 +194,11 @@ const CanvasBoard = forwardRef(
 
       const rect =
         canvas.getBoundingClientRect();
+
+      setCursorPosition({
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top,
+      });
 
       const fakeEvent = {
         nativeEvent: {
@@ -440,7 +448,7 @@ const CanvasBoard = forwardRef(
           {/* Floating Save Button */}
           <button
             onClick={saveCanvas}
-            className="absolute bottom-6 right-6 px-5 py-3 rounded-2xl bg-white text-black font-medium shadow-xl hover:scale-105 transition-all duration-300"
+            className="absolute bottom-4 right-4 md:bottom-6 md:right-6 px-5 py-3 rounded-2xl bg-white text-black font-medium shadow-xl hover:scale-105 transition-all duration-300"
           >
             Save PNG
           </button>
