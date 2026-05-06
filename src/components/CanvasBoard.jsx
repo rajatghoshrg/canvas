@@ -140,6 +140,7 @@ const CanvasBoard = forwardRef(
     };
 
     // Draw
+    // Draw
     const draw = (e) => {
       if (!isDrawing) return;
 
@@ -165,6 +166,48 @@ const CanvasBoard = forwardRef(
       );
 
       ctx.stroke();
+    };
+
+    // Touch Start
+    const handleTouchStart = (e) => {
+      e.preventDefault();
+
+      const touch = e.touches[0];
+
+      const canvas = canvasRef.current;
+
+      const rect =
+        canvas.getBoundingClientRect();
+
+      const fakeEvent = {
+        nativeEvent: {
+          offsetX: touch.clientX - rect.left,
+          offsetY: touch.clientY - rect.top,
+        },
+      };
+
+      startDrawing(fakeEvent);
+    };
+
+    // Touch Move
+    const handleTouchMove = (e) => {
+      e.preventDefault();
+
+      const touch = e.touches[0];
+
+      const canvas = canvasRef.current;
+
+      const rect =
+        canvas.getBoundingClientRect();
+
+      const fakeEvent = {
+        nativeEvent: {
+          offsetX: touch.clientX - rect.left,
+          offsetY: touch.clientY - rect.top,
+        },
+      };
+
+      draw(fakeEvent);
     };
 
     // Stop Drawing
@@ -209,7 +252,7 @@ const CanvasBoard = forwardRef(
 
       const previousState =
         newHistory[
-          newHistory.length - 1
+        newHistory.length - 1
         ];
 
       const img = new Image();
@@ -249,7 +292,7 @@ const CanvasBoard = forwardRef(
 
       const redoState =
         redoHistory[
-          redoHistory.length - 1
+        redoHistory.length - 1
         ];
 
       const updatedRedo = [
@@ -323,15 +366,23 @@ const CanvasBoard = forwardRef(
         className="w-full h-full flex items-center justify-center p-4"
       >
         <div className="relative w-full h-full rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-black/20 backdrop-blur-xl">
-          
+
           {/* Canvas */}
           <canvas
             ref={canvasRef}
-            className="w-full h-full cursor-crosshair"
+            className="w-full h-full cursor-crosshair touch-none select-none"
+            style={{
+              touchAction: "none",
+            }}
+
             onMouseDown={startDrawing}
             onMouseMove={draw}
             onMouseUp={stopDrawing}
             onMouseLeave={stopDrawing}
+
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={stopDrawing}
           />
 
           {/* Floating Save Button */}
