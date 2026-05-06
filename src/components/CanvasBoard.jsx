@@ -23,8 +23,15 @@ const CanvasBoard = forwardRef(
       useState(false);
 
     const [history, setHistory] = useState([]);
+
     const [redoHistory, setRedoHistory] =
       useState([]);
+
+    const [cursorPosition, setCursorPosition] =
+      useState({
+        x: 0,
+        y: 0,
+      });
 
     // Resize Canvas
     useEffect(() => {
@@ -142,12 +149,18 @@ const CanvasBoard = forwardRef(
     // Draw
     // Draw
     const draw = (e) => {
-      if (!isDrawing) return;
+      if (!isDrawing || e.buttons !== 1)
+        return;
 
       const canvas = canvasRef.current;
 
       const ctx =
         canvas.getContext("2d");
+
+      setCursorPosition({
+        x: e.nativeEvent.offsetX,
+        y: e.nativeEvent.offsetY,
+      });
 
       ctx.lineWidth = brushSize;
 
@@ -360,6 +373,15 @@ const CanvasBoard = forwardRef(
       saveState();
     }, []);
 
+    const handleMouseMove = (e) => {
+      setCursorPosition({
+        x: e.nativeEvent.offsetX,
+        y: e.nativeEvent.offsetY,
+      });
+
+      draw(e);
+    };
+
     return (
       <div
         ref={containerRef}
@@ -370,20 +392,50 @@ const CanvasBoard = forwardRef(
           {/* Canvas */}
           <canvas
             ref={canvasRef}
-            className="w-full h-full cursor-crosshair touch-none select-none"
+            className={`w-full h-full touch-none select-none ${tool === "eraser"
+              ? "cursor-none"
+              : "cursor-crosshair"
+              }`}
             style={{
               touchAction: "none",
             }}
 
             onMouseDown={startDrawing}
-            onMouseMove={draw}
+            onMouseMove={handleMouseMove}
             onMouseUp={stopDrawing}
             onMouseLeave={stopDrawing}
+            onMouseOut={stopDrawing}
 
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={stopDrawing}
           />
+
+          {/* Eraser Preview */}
+          {tool === "eraser" && (
+            <div
+              className="absolute pointer-events-none rounded-full border z-50 transition-all duration-75"
+              style={{
+                width: brushSize * 1.5,
+                height: brushSize * 1.5,
+                left: cursorPosition.x,
+                top: cursorPosition.y,
+                transform: "translate(-50%, -50%)",
+                boxShadow:
+                  boardColor === "#ffffff"
+                    ? "0 0 0 1px rgba(0,0,0,0.2)"
+                    : "0 0 0 1px rgba(255,255,255,0.2)",
+                borderColor:
+                  boardColor === "#ffffff"
+                    ? "#000000"
+                    : "#ffffff",
+                backgroundColor:
+                  boardColor === "#ffffff"
+                    ? "rgba(0,0,0,0.15)"
+                    : "rgba(255,255,255,0.15)",
+              }}
+            />
+          )}
 
           {/* Floating Save Button */}
           <button
