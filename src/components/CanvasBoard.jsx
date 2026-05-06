@@ -152,7 +152,13 @@ const CanvasBoard = forwardRef(
     // Draw
     // Draw
     const draw = (e) => {
-      if (!isDrawing || e.buttons !== 1)
+      if (!isDrawing) return;
+
+      if (
+        e.nativeEvent &&
+        "buttons" in e.nativeEvent &&
+        e.nativeEvent.buttons !== 1
+      )
         return;
 
       const canvas = canvasRef.current;
@@ -220,6 +226,11 @@ const CanvasBoard = forwardRef(
 
       const rect =
         canvas.getBoundingClientRect();
+
+      setCursorPosition({
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top,
+      });
 
       const fakeEvent = {
         nativeEvent: {
