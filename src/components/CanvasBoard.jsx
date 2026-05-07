@@ -33,6 +33,14 @@ const CanvasBoard = forwardRef(
         y: 0,
       });
 
+    const [texts, setTexts] = useState([]);
+
+    const [selectedTextId, setSelectedTextId] =
+      useState(null);
+
+    const [draggingTextId, setDraggingTextId] =
+      useState(null);
+
     // Resize Canvas
     useEffect(() => {
       const canvas = canvasRef.current;
@@ -42,11 +50,9 @@ const CanvasBoard = forwardRef(
         const ctx =
           canvas.getContext("2d");
 
-        // Save current drawing
         const savedImage =
           canvas.toDataURL();
 
-        // Resize canvas
         canvas.width =
           container.offsetWidth;
 
@@ -56,7 +62,6 @@ const CanvasBoard = forwardRef(
             700
           );
 
-        // Fill background
         ctx.fillStyle = boardColor;
 
         ctx.fillRect(
@@ -66,7 +71,6 @@ const CanvasBoard = forwardRef(
           canvas.height
         );
 
-        // Restore image
         const img = new Image();
 
         img.src = savedImage;
@@ -91,13 +95,13 @@ const CanvasBoard = forwardRef(
       };
     }, []);
 
-    // Update Background Color
+    // Background Change
     useEffect(() => {
       const canvas = canvasRef.current;
+
       const ctx =
         canvas.getContext("2d");
 
-      // Clear canvas
       ctx.clearRect(
         0,
         0,
@@ -105,7 +109,6 @@ const CanvasBoard = forwardRef(
         canvas.height
       );
 
-      // Apply new background
       ctx.fillStyle = boardColor;
 
       ctx.fillRect(
@@ -115,11 +118,10 @@ const CanvasBoard = forwardRef(
         canvas.height
       );
 
-      // Save fresh state
       saveState();
     }, [boardColor]);
 
-    // Save Canvas State
+    // Save State
     const saveState = () => {
       const canvas = canvasRef.current;
 
@@ -132,6 +134,7 @@ const CanvasBoard = forwardRef(
       ]);
     };
 
+    // Coordinates
     const getCoordinates = (e) => {
       const canvas = canvasRef.current;
 
@@ -151,8 +154,25 @@ const CanvasBoard = forwardRef(
       };
     };
 
+    // Add Text
+    const addText = (x, y) => {
+      const newText = {
+        id: Date.now(),
+        text: "Text",
+        x,
+        y,
+        isEditing: true,
+      };
+
+      setTexts((prev) => [...prev, newText]);
+
+      setSelectedTextId(newText.id);
+    };
+
     // Start Drawing
     const startDrawing = (e) => {
+      if (tool === "text") return;
+
       const canvas = canvasRef.current;
 
       const ctx =
@@ -170,8 +190,9 @@ const CanvasBoard = forwardRef(
     };
 
     // Draw
-    // Draw
     const draw = (e) => {
+      if (tool === "text") return;
+
       if (!isDrawing) return;
 
       if (
@@ -234,6 +255,17 @@ const CanvasBoard = forwardRef(
         },
       };
 
+      if (tool === "text") {
+        const { x, y } = getCoordinates({
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+        });
+
+        addText(x, y);
+
+        return;
+      }
+
       startDrawing(fakeEvent);
     };
 
@@ -276,7 +308,6 @@ const CanvasBoard = forwardRef(
 
       setIsDrawing(false);
 
-      // Clear redo history
       setRedoHistory([]);
 
       saveState();
@@ -345,7 +376,7 @@ const CanvasBoard = forwardRef(
 
       const redoState =
         redoHistory[
-        redoHistory.length - 1
+          redoHistory.length - 1
         ];
 
       const updatedRedo = [
@@ -413,6 +444,7 @@ const CanvasBoard = forwardRef(
       saveState();
     }, []);
 
+    // Mouse Move
     const handleMouseMove = (e) => {
       const { x, y } = getCoordinates(
         e.nativeEvent
@@ -422,68 +454,389 @@ const CanvasBoard = forwardRef(
         x,
         y,
       });
+
       draw(e);
+    };
+
+    // Canvas Click
+    const handleCanvasClick = (e) => {
+      if (tool !== "text") return;
+
+      if (selectedTextId) return;
+
+      const { x, y } = getCoordinates(
+        e.nativeEvent
+      );
+
+      addText(x, y);
+    };
+
+    // Move Text
+    const moveText = (id, x, y) => {
+      setTexts((prev) =>
+        prev.map((text) =>
+          text.id === id
+            ? { ...text, x, y }
+            : text
+        )
+      );
     };
 
     return (
       <div
         ref={containerRef}
         className="w-full h-full flex items-center justify-center p-4"
+
+        onMouseMove={(e) => {
+          if (!draggingTextId) return;
+
+          const { x, y } = getCoordinates(
+            e.nativeEvent
+          );
+
+          moveText(
+            draggingTextId,
+            x,
+            y
+          );
+        }}
+
+        onTouchMove={(e) => {
+          e.preventDefault();
+
+          if (!draggingTextId) return;
+
+          const touch = e.touches[0];
+
+          const { x, y } =
+            getCoordinates({
+              clientX: touch.clientX,
+              clientY: touch.clientY,
+            });
+
+          moveText(
+            draggingTextId,
+            x,
+            y
+          );
+        }}
+
+        onMouseUp={() =>
+          setDraggingTextId(null)
+        }
+
+        onTouchEnd={() =>
+          setDraggingTextId(null)
+        }
+
+        onTouchCancel={() =>
+          setDraggingTextId(null)
+        }
       >
         <div className="relative w-full h-full rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-black/20 backdrop-blur-xl">
 
           {/* Canvas */}
           <canvas
             ref={canvasRef}
-            className={`w-full h-full touch-none select-none ${tool === "eraser"
-              ? "cursor-none"
-              : "cursor-crosshair"
-              }`}
+            className={`w-full h-full touch-none select-none ${
+              tool === "eraser"
+                ? "cursor-none"
+                : "cursor-crosshair"
+            }`}
             style={{
               touchAction: "none",
             }}
-
             onMouseDown={startDrawing}
             onMouseMove={handleMouseMove}
             onMouseUp={stopDrawing}
             onMouseLeave={stopDrawing}
             onMouseOut={stopDrawing}
-
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={stopDrawing}
+            onClick={handleCanvasClick}
           />
+
+          {/* TEXTS */}
+          {texts.map((item) => (
+            <div
+              key={item.id}
+              className="absolute"
+              style={{
+                left: item.x,
+                top: item.y,
+                transform:
+                  "translate(-50%, -50%)",
+
+                cursor:
+                  draggingTextId ===
+                  item.id
+                    ? "grabbing"
+                    : "grab",
+              }}
+            >
+              {/* Drag Handle */}
+              <div
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+
+                  setDraggingTextId(
+                    item.id
+                  );
+                }}
+
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+
+                  setDraggingTextId(
+                    item.id
+                  );
+                }}
+
+                className="
+                  w-10 h-2 mb-2 mx-auto
+                  rounded-full
+                  bg-white/30
+                  cursor-grab
+                  active:cursor-grabbing
+                "
+              />
+
+              {item.isEditing ? (
+                <textarea
+                  value={item.text}
+                  rows={2}
+                  autoFocus
+
+                  onChange={(e) =>
+                    setTexts((prev) =>
+                      prev.map((text) =>
+                        text.id === item.id
+                          ? {
+                              ...text,
+                              text:
+                                e.target.value,
+                            }
+                          : text
+                      )
+                    )
+                  }
+
+                  onBlur={() => {
+                    setTexts((prev) =>
+                      prev.map((text) =>
+                        text.id === item.id
+                          ? {
+                              ...text,
+                              isEditing: false,
+                            }
+                          : text
+                      )
+                    );
+
+                    setSelectedTextId(
+                      null
+                    );
+                  }}
+
+                  className="
+                    min-w-[120px]
+                    max-w-[220px]
+                    max-w-[70vw]
+                    outline-none
+                    resize-none
+                    font-semibold
+                    text-lg
+                    px-3 py-2
+                    rounded-xl
+                    border
+                    shadow-lg
+                  "
+
+                  style={{
+                    color:
+                      boardColor ===
+                      "#ffffff"
+                        ? "#000000"
+                        : "#ffffff",
+
+                    backgroundColor:
+                      boardColor ===
+                      "#ffffff"
+                        ? "rgba(255,255,255,0.95)"
+                        : "rgba(0,0,0,0.85)",
+
+                    borderColor:
+                      boardColor ===
+                      "#ffffff"
+                        ? "#000000"
+                        : "#ffffff",
+                  }}
+                />
+              ) : (
+                <div
+                  onClick={() =>
+                    setSelectedTextId(
+                      item.id
+                    )
+                  }
+
+                  onDoubleClick={() =>
+                    setTexts((prev) =>
+                      prev.map((text) =>
+                        text.id === item.id
+                          ? {
+                              ...text,
+                              isEditing: true,
+                            }
+                          : text
+                      )
+                    )
+                  }
+
+                  onTouchStart={() =>
+                    setTexts((prev) =>
+                      prev.map((text) =>
+                        text.id === item.id
+                          ? {
+                              ...text,
+                              isEditing: true,
+                            }
+                          : text
+                      )
+                    )
+                  }
+
+                  className="
+                    px-3 py-2
+                    rounded-xl
+                    font-semibold
+                    text-lg
+                    whitespace-pre-wrap
+                    cursor-text
+                  "
+
+                  style={{
+                    color:
+                      boardColor ===
+                      "#ffffff"
+                        ? "#000000"
+                        : "#ffffff",
+                  }}
+                >
+                  {item.text}
+                </div>
+              )}
+
+              {/* Delete */}
+              {selectedTextId ===
+                item.id && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+
+                    setTexts((prev) =>
+                      prev.filter(
+                        (text) =>
+                          text.id !==
+                          item.id
+                      )
+                    );
+
+                    setSelectedTextId(
+                      null
+                    );
+                  }}
+
+                  className="
+                    absolute
+                    -top-3
+                    -right-3
+                    w-6
+                    h-6
+                    rounded-full
+                    bg-red-500
+                    text-white
+                    text-xs
+                  "
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
 
           {/* Eraser Preview */}
           {tool === "eraser" && (
             <div
-              className="absolute pointer-events-none rounded-full border z-50 transition-all duration-75"
+              className="
+                absolute
+                pointer-events-none
+                rounded-full
+                border
+                z-50
+                transition-all
+                duration-75
+              "
               style={{
-                width: brushSize * 1.5,
-                height: brushSize * 1.5,
-                left: cursorPosition.x,
-                top: cursorPosition.y,
-                transform: "translate(-50%, -50%)",
+                width:
+                  brushSize * 1.5,
+
+                height:
+                  brushSize * 1.5,
+
+                left:
+                  cursorPosition.x,
+
+                top:
+                  cursorPosition.y,
+
+                transform:
+                  "translate(-50%, -50%)",
+
                 boxShadow:
-                  boardColor === "#ffffff"
+                  boardColor ===
+                  "#ffffff"
                     ? "0 0 0 1px rgba(0,0,0,0.2)"
                     : "0 0 0 1px rgba(255,255,255,0.2)",
+
                 borderColor:
-                  boardColor === "#ffffff"
+                  boardColor ===
+                  "#ffffff"
                     ? "#000000"
                     : "#ffffff",
+
                 backgroundColor:
-                  boardColor === "#ffffff"
-                    ? "rgba(0,0,0,0.15)"
-                    : "rgba(255,255,255,0.15)",
+                  boardColor ===
+                  "#ffffff"
+                    ? "rgba(255,255,255,0.95)"
+                    : "rgba(0,0,0,0.85)",
               }}
             />
           )}
 
-          {/* Floating Save Button */}
+          {/* Save Button */}
           <button
             onClick={saveCanvas}
-            className="absolute bottom-4 right-4 md:bottom-6 md:right-6 px-5 py-3 rounded-2xl bg-white text-black font-medium shadow-xl hover:scale-105 transition-all duration-300"
+            className="
+              absolute
+              bottom-4
+              right-4
+              md:bottom-6
+              md:right-6
+              px-5
+              py-3
+              rounded-2xl
+              bg-white
+              text-black
+              font-medium
+              shadow-xl
+              hover:scale-105
+              transition-all
+              duration-300
+            "
           >
             Save PNG
           </button>

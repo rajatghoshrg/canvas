@@ -1,4 +1,5 @@
 import React from "react";
+import { Type } from "lucide-react";
 
 import {
   FaPencilAlt,
@@ -32,6 +33,12 @@ export default function Toolbar({
       icon: <FaEraser size={18} />,
       action: () => setTool("eraser"),
     },
+    {
+      name: "text",
+      label: "Text",
+      icon: <Type size={18} />,
+      action: () => setTool("text"),
+    }
   ];
 
   const actionButtons = [
@@ -51,10 +58,10 @@ export default function Toolbar({
 
   return (
     <div className="w-full flex justify-center px-4 py-4">
-      
+
       {/* Glass Toolbar */}
       <div className="w-full max-w-4xl flex flex-wrap items-center justify-center gap-3 md:gap-4 px-4 py-3 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-2xl shadow-xl transition-all duration-300 hover:border-white/20">
-        
+
         {/* Drawing Tools */}
         <div className="flex items-center gap-3">
           {tools.map((item) => {
@@ -70,10 +77,9 @@ export default function Toolbar({
                   relative p-3 rounded-2xl border
                   transition-all duration-300
                   hover:scale-105 active:scale-95
-                  ${
-                    isActive
-                      ? "bg-white text-black border-white shadow-lg ring-2 ring-white/50"
-                      : "bg-white/10 text-white border-white/10 hover:bg-white/20 hover:border-white/30"
+                  ${isActive
+                    ? "bg-white text-black border-white shadow-lg ring-2 ring-white/50"
+                    : "bg-white/10 text-white border-white/10 hover:bg-white/20 hover:border-white/30"
                   }
                 `}
               >
@@ -121,7 +127,7 @@ export default function Toolbar({
 
           {/* Circle Color Picker */}
           <label className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white/20 cursor-pointer hover:scale-105 transition-all duration-300">
-            
+
             <input
               type="color"
               value={brushColor}
@@ -145,7 +151,7 @@ export default function Toolbar({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3">
-          
+
           {/* Undo / Redo */}
           {actionButtons.map((item) => (
             <button
