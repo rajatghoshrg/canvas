@@ -376,7 +376,7 @@ const CanvasBoard = forwardRef(
 
       const redoState =
         redoHistory[
-          redoHistory.length - 1
+        redoHistory.length - 1
         ];
 
       const updatedRedo = [
@@ -473,10 +473,35 @@ const CanvasBoard = forwardRef(
 
     // Move Text
     const moveText = (id, x, y) => {
+      const canvas = canvasRef.current;
+
+      const paddingX = 120;
+      const paddingY = 60;
+
+      const clampedX = Math.max(
+        0,
+        Math.min(
+          x,
+          canvas.width - paddingX
+        )
+      );
+
+      const clampedY = Math.max(
+        0,
+        Math.min(
+          y,
+          canvas.height - paddingY
+        )
+      );
+
       setTexts((prev) =>
         prev.map((text) =>
           text.id === id
-            ? { ...text, x, y }
+            ? {
+              ...text,
+              x: clampedX,
+              y: clampedY,
+            }
             : text
         )
       );
@@ -538,11 +563,10 @@ const CanvasBoard = forwardRef(
           {/* Canvas */}
           <canvas
             ref={canvasRef}
-            className={`w-full h-full touch-none select-none ${
-              tool === "eraser"
-                ? "cursor-none"
-                : "cursor-crosshair"
-            }`}
+            className={`w-full h-full touch-none select-none ${tool === "eraser"
+              ? "cursor-none"
+              : "cursor-crosshair"
+              }`}
             style={{
               touchAction: "none",
             }}
@@ -565,12 +589,9 @@ const CanvasBoard = forwardRef(
               style={{
                 left: item.x,
                 top: item.y,
-                transform:
-                  "translate(-50%, -50%)",
-
                 cursor:
                   draggingTextId ===
-                  item.id
+                    item.id
                     ? "grabbing"
                     : "grab",
               }}
@@ -615,10 +636,10 @@ const CanvasBoard = forwardRef(
                       prev.map((text) =>
                         text.id === item.id
                           ? {
-                              ...text,
-                              text:
-                                e.target.value,
-                            }
+                            ...text,
+                            text:
+                              e.target.value,
+                          }
                           : text
                       )
                     )
@@ -629,9 +650,9 @@ const CanvasBoard = forwardRef(
                       prev.map((text) =>
                         text.id === item.id
                           ? {
-                              ...text,
-                              isEditing: false,
-                            }
+                            ...text,
+                            isEditing: false,
+                          }
                           : text
                       )
                     );
@@ -658,19 +679,19 @@ const CanvasBoard = forwardRef(
                   style={{
                     color:
                       boardColor ===
-                      "#ffffff"
+                        "#ffffff"
                         ? "#000000"
                         : "#ffffff",
 
                     backgroundColor:
                       boardColor ===
-                      "#ffffff"
+                        "#ffffff"
                         ? "rgba(255,255,255,0.95)"
                         : "rgba(0,0,0,0.85)",
 
                     borderColor:
                       boardColor ===
-                      "#ffffff"
+                        "#ffffff"
                         ? "#000000"
                         : "#ffffff",
                   }}
@@ -688,9 +709,9 @@ const CanvasBoard = forwardRef(
                       prev.map((text) =>
                         text.id === item.id
                           ? {
-                              ...text,
-                              isEditing: true,
-                            }
+                            ...text,
+                            isEditing: true,
+                          }
                           : text
                       )
                     )
@@ -701,9 +722,9 @@ const CanvasBoard = forwardRef(
                       prev.map((text) =>
                         text.id === item.id
                           ? {
-                              ...text,
-                              isEditing: true,
-                            }
+                            ...text,
+                            isEditing: true,
+                          }
                           : text
                       )
                     )
@@ -721,7 +742,7 @@ const CanvasBoard = forwardRef(
                   style={{
                     color:
                       boardColor ===
-                      "#ffffff"
+                        "#ffffff"
                         ? "#000000"
                         : "#ffffff",
                   }}
@@ -733,24 +754,24 @@ const CanvasBoard = forwardRef(
               {/* Delete */}
               {selectedTextId ===
                 item.id && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
 
-                    setTexts((prev) =>
-                      prev.filter(
-                        (text) =>
-                          text.id !==
-                          item.id
-                      )
-                    );
+                      setTexts((prev) =>
+                        prev.filter(
+                          (text) =>
+                            text.id !==
+                            item.id
+                        )
+                      );
 
-                    setSelectedTextId(
-                      null
-                    );
-                  }}
+                      setSelectedTextId(
+                        null
+                      );
+                    }}
 
-                  className="
+                    className="
                     absolute
                     -top-3
                     -right-3
@@ -761,10 +782,10 @@ const CanvasBoard = forwardRef(
                     text-white
                     text-xs
                   "
-                >
-                  ✕
-                </button>
-              )}
+                  >
+                    ✕
+                  </button>
+                )}
             </div>
           ))}
 
@@ -798,19 +819,19 @@ const CanvasBoard = forwardRef(
 
                 boxShadow:
                   boardColor ===
-                  "#ffffff"
+                    "#ffffff"
                     ? "0 0 0 1px rgba(0,0,0,0.2)"
                     : "0 0 0 1px rgba(255,255,255,0.2)",
 
                 borderColor:
                   boardColor ===
-                  "#ffffff"
+                    "#ffffff"
                     ? "#000000"
                     : "#ffffff",
 
                 backgroundColor:
                   boardColor ===
-                  "#ffffff"
+                    "#ffffff"
                     ? "rgba(255,255,255,0.95)"
                     : "rgba(0,0,0,0.85)",
               }}
