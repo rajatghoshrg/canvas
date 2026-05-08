@@ -17,9 +17,13 @@ const CanvasBoard = forwardRef(
     ref
   ) => {
     const canvasRef = useRef(null);
+
     const containerRef = useRef(null);
 
     const [isDrawing, setIsDrawing] =
+      useState(false);
+
+    const [isTyping, setIsTyping] =
       useState(false);
 
     const [history, setHistory] = useState([]);
@@ -41,9 +45,13 @@ const CanvasBoard = forwardRef(
     const [draggingTextId, setDraggingTextId] =
       useState(null);
 
+    const [hoveredTextId, setHoveredTextId] =
+      useState(null);
+
     // Resize Canvas
     useEffect(() => {
       const canvas = canvasRef.current;
+
       const container = containerRef.current;
 
       const resizeCanvas = () => {
@@ -95,19 +103,12 @@ const CanvasBoard = forwardRef(
       };
     }, []);
 
-    // Background Change
+    // Background
     useEffect(() => {
       const canvas = canvasRef.current;
 
       const ctx =
         canvas.getContext("2d");
-
-      ctx.clearRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
 
       ctx.fillStyle = boardColor;
 
@@ -117,8 +118,6 @@ const CanvasBoard = forwardRef(
         canvas.width,
         canvas.height
       );
-
-      saveState();
     }, [boardColor]);
 
     // Save State
@@ -161,6 +160,7 @@ const CanvasBoard = forwardRef(
         text: "Text",
         x,
         y,
+        fontSize: 24,
         isEditing: true,
       };
 
@@ -172,6 +172,8 @@ const CanvasBoard = forwardRef(
     // Start Drawing
     const startDrawing = (e) => {
       if (tool === "text") return;
+
+      if (isTyping) return;
 
       const canvas = canvasRef.current;
 
@@ -192,6 +194,8 @@ const CanvasBoard = forwardRef(
     // Draw
     const draw = (e) => {
       if (tool === "text") return;
+
+      if (isTyping) return;
 
       if (!isDrawing) return;
 
@@ -236,6 +240,8 @@ const CanvasBoard = forwardRef(
     const handleTouchStart = (e) => {
       e.preventDefault();
 
+      if (isTyping) return;
+
       const touch = e.touches[0];
 
       const canvas = canvasRef.current;
@@ -256,6 +262,8 @@ const CanvasBoard = forwardRef(
       };
 
       if (tool === "text") {
+        if (selectedTextId) return;
+
         const { x, y } = getCoordinates({
           clientX: touch.clientX,
           clientY: touch.clientY,
@@ -272,6 +280,8 @@ const CanvasBoard = forwardRef(
     // Touch Move
     const handleTouchMove = (e) => {
       e.preventDefault();
+
+      if (isTyping) return;
 
       const touch = e.touches[0];
 
@@ -421,30 +431,74 @@ const CanvasBoard = forwardRef(
     const saveCanvas = () => {
       const canvas = canvasRef.current;
 
+      const exportCanvas =
+        document.createElement("canvas");
+
+      exportCanvas.width = canvas.width;
+
+      exportCanvas.height =
+        canvas.height;
+
+      const exportCtx =
+        exportCanvas.getContext("2d");
+
+      exportCtx.fillStyle = boardColor;
+
+      exportCtx.fillRect(
+        0,
+        0,
+        exportCanvas.width,
+        exportCanvas.height
+      );
+
+      exportCtx.drawImage(canvas, 0, 0);
+
+      texts.forEach((item) => {
+        exportCtx.font = `bold ${item.fontSize}px Arial`;
+
+        exportCtx.fillStyle =
+          boardColor === "#ffffff"
+            ? "#000000"
+            : "#ffffff";
+
+        const lines =
+          item.text.split("\n");
+
+        lines.forEach((line, index) => {
+          exportCtx.fillText(
+            line,
+            item.x,
+            item.y +
+            index *
+            item.fontSize *
+            1.4
+          );
+        });
+      });
+
       const link =
         document.createElement("a");
 
       link.download = "painting.png";
 
       link.href =
-        canvas.toDataURL("image/png");
+        exportCanvas.toDataURL(
+          "image/png"
+        );
 
       link.click();
     };
 
-    // Expose Functions
     useImperativeHandle(ref, () => ({
       undo,
       redo,
       saveCanvas,
     }));
 
-    // Initial State
     useEffect(() => {
       saveState();
     }, []);
 
-    // Mouse Move
     const handleMouseMove = (e) => {
       const { x, y } = getCoordinates(
         e.nativeEvent
@@ -458,7 +512,6 @@ const CanvasBoard = forwardRef(
       draw(e);
     };
 
-    // Canvas Click
     const handleCanvasClick = (e) => {
       if (tool !== "text") return;
 
@@ -473,34 +526,13 @@ const CanvasBoard = forwardRef(
 
     // Move Text
     const moveText = (id, x, y) => {
-      const canvas = canvasRef.current;
-
-      const paddingX = 120;
-      const paddingY = 60;
-
-      const clampedX = Math.max(
-        0,
-        Math.min(
-          x,
-          canvas.width - paddingX
-        )
-      );
-
-      const clampedY = Math.max(
-        0,
-        Math.min(
-          y,
-          canvas.height - paddingY
-        )
-      );
-
       setTexts((prev) =>
         prev.map((text) =>
           text.id === id
             ? {
               ...text,
-              x: clampedX,
-              y: clampedY,
+              x,
+              y,
             }
             : text
         )
@@ -511,13 +543,13 @@ const CanvasBoard = forwardRef(
       <div
         ref={containerRef}
         className="w-full h-full flex items-center justify-center p-4"
-
         onMouseMove={(e) => {
           if (!draggingTextId) return;
 
-          const { x, y } = getCoordinates(
-            e.nativeEvent
-          );
+          const { x, y } =
+            getCoordinates(
+              e.nativeEvent
+            );
 
           moveText(
             draggingTextId,
@@ -525,7 +557,6 @@ const CanvasBoard = forwardRef(
             y
           );
         }}
-
         onTouchMove={(e) => {
           e.preventDefault();
 
@@ -535,8 +566,10 @@ const CanvasBoard = forwardRef(
 
           const { x, y } =
             getCoordinates({
-              clientX: touch.clientX,
-              clientY: touch.clientY,
+              clientX:
+                touch.clientX,
+              clientY:
+                touch.clientY,
             });
 
           moveText(
@@ -545,15 +578,12 @@ const CanvasBoard = forwardRef(
             y
           );
         }}
-
         onMouseUp={() =>
           setDraggingTextId(null)
         }
-
         onTouchEnd={() =>
           setDraggingTextId(null)
         }
-
         onTouchCancel={() =>
           setDraggingTextId(null)
         }
@@ -571,21 +601,41 @@ const CanvasBoard = forwardRef(
               touchAction: "none",
             }}
             onMouseDown={startDrawing}
-            onMouseMove={handleMouseMove}
+            onMouseMove={
+              handleMouseMove
+            }
             onMouseUp={stopDrawing}
-            onMouseLeave={stopDrawing}
-            onMouseOut={stopDrawing}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={stopDrawing}
-            onClick={handleCanvasClick}
+            onMouseLeave={
+              stopDrawing
+            }
+            onMouseOut={
+              stopDrawing
+            }
+            onTouchStart={
+              handleTouchStart
+            }
+            onTouchMove={
+              handleTouchMove
+            }
+            onTouchEnd={
+              stopDrawing
+            }
+            onClick={
+              handleCanvasClick
+            }
           />
 
           {/* TEXTS */}
           {texts.map((item) => (
             <div
               key={item.id}
-              className="absolute"
+              className="absolute z-50"
+              onMouseEnter={() =>
+                setHoveredTextId(item.id)
+              }
+              onMouseLeave={() =>
+                setHoveredTextId(null)
+              }
               style={{
                 left: item.x,
                 top: item.y,
@@ -597,86 +647,192 @@ const CanvasBoard = forwardRef(
               }}
             >
               {/* Drag Handle */}
-              <div
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
+              {(hoveredTextId ===
+                item.id ||
+                selectedTextId ===
+                item.id) && (
+                  <div
+                    onMouseDown={(e) => {
+                      e.preventDefault();
 
-                  setDraggingTextId(
-                    item.id
-                  );
-                }}
+                      e.stopPropagation();
 
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
+                      setDraggingTextId(
+                        item.id
+                      );
+                    }}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
 
-                  setDraggingTextId(
-                    item.id
-                  );
-                }}
+                      e.stopPropagation();
 
-                className="
-                  w-10 h-2 mb-2 mx-auto
-                  rounded-full
-                  bg-white/30
-                  cursor-grab
-                  active:cursor-grabbing
-                "
-              />
+                      setDraggingTextId(
+                        item.id
+                      );
+                    }}
+                    className="
+                    absolute
+                    -top-5
+                    left-1/2
+                    -translate-x-1/2
+                    w-10
+                    h-2
+                    rounded-full
+                    bg-white/40
+                    cursor-grab
+                    active:cursor-grabbing
+                    transition-all
+                    duration-200
+                  "
+                  />
+                )}
 
+              {/* FONT CONTROLS */}
+              {selectedTextId ===
+                item.id &&
+                item.isEditing && (
+                  <div className="absolute -top-10 left-0 flex items-center gap-2 bg-black/70 px-2 py-1 rounded-lg border border-white/20">
+
+                    <button
+                      onMouseDown={(e) =>
+                        e.preventDefault()
+                      }
+                      onClick={() =>
+                        setTexts((prev) =>
+                          prev.map((text) =>
+                            text.id === item.id
+                              ? {
+                                ...text,
+                                fontSize:
+                                  Math.max(
+                                    12,
+                                    text.fontSize - 2
+                                  ),
+                              }
+                              : text
+                          )
+                        )
+                      }
+                      className="w-7 h-7 rounded bg-white text-black font-bold"
+                    >
+                      -
+                    </button>
+
+                    <span className="text-white text-sm">
+                      {
+                        item.fontSize
+                      }
+                    </span>
+
+                    <button
+                      onMouseDown={(e) =>
+                        e.preventDefault()
+                      }
+                      onClick={() =>
+                        setTexts((prev) =>
+                          prev.map((text) =>
+                            text.id === item.id
+                              ? {
+                                ...text,
+                                fontSize:
+                                  Math.min(
+                                    120,
+                                    text.fontSize + 2
+                                  ),
+                              }
+                              : text
+                          )
+                        )
+                      }
+                      className="w-7 h-7 rounded bg-white text-black font-bold"
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
+
+              {/* Editing */}
               {item.isEditing ? (
                 <textarea
                   value={item.text}
                   rows={2}
                   autoFocus
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onFocus={() => {
+                    setIsTyping(true);
 
+                    setSelectedTextId(
+                      item.id
+                    );
+                  }}
+                  onBlur={() => {
+                    setTexts((prev) =>
+                      prev.map(
+                        (text) =>
+                          text.id ===
+                            item.id
+                            ? {
+                              ...text,
+                              isEditing:
+                                false,
+                            }
+                            : text
+                      )
+                    );
+
+                    setIsTyping(false);
+                  }}
+                  onInput={(e) => {
+                    e.target.style.height =
+                      "auto";
+
+                    e.target.style.height =
+                      e.target
+                        .scrollHeight +
+                      "px";
+                  }}
                   onChange={(e) =>
                     setTexts((prev) =>
-                      prev.map((text) =>
-                        text.id === item.id
-                          ? {
-                            ...text,
-                            text:
-                              e.target.value,
-                          }
-                          : text
+                      prev.map(
+                        (text) =>
+                          text.id ===
+                            item.id
+                            ? {
+                              ...text,
+                              text:
+                                e.target
+                                  .value,
+                            }
+                            : text
                       )
                     )
                   }
-
-                  onBlur={() => {
-                    setTexts((prev) =>
-                      prev.map((text) =>
-                        text.id === item.id
-                          ? {
-                            ...text,
-                            isEditing: false,
-                          }
-                          : text
-                      )
-                    );
-
-                    setSelectedTextId(
-                      null
-                    );
-                  }}
-
                   className="
                     min-w-[120px]
-                    max-w-[220px]
+                    w-auto
                     max-w-[70vw]
                     outline-none
                     resize-none
                     font-semibold
-                    text-lg
                     px-3 py-2
-                    rounded-xl
-                    border
-                    shadow-lg
+                    border-2
+                    pointer-events-auto
                   "
-
                   style={{
+                    height: "auto",
+
+                    fontFamily:
+                      "Arial",
+
+                    lineHeight: "1.4",
+
+                    fontSize: `${item.fontSize}px`,
+
                     color:
                       boardColor ===
                         "#ffffff"
@@ -684,10 +840,7 @@ const CanvasBoard = forwardRef(
                         : "#ffffff",
 
                     backgroundColor:
-                      boardColor ===
-                        "#ffffff"
-                        ? "rgba(255,255,255,0.95)"
-                        : "rgba(0,0,0,0.85)",
+                      "transparent",
 
                     borderColor:
                       boardColor ===
@@ -698,48 +851,46 @@ const CanvasBoard = forwardRef(
                 />
               ) : (
                 <div
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                  }}
                   onClick={() =>
                     setSelectedTextId(
                       item.id
                     )
                   }
-
                   onDoubleClick={() =>
                     setTexts((prev) =>
-                      prev.map((text) =>
-                        text.id === item.id
-                          ? {
-                            ...text,
-                            isEditing: true,
-                          }
-                          : text
+                      prev.map(
+                        (text) =>
+                          text.id ===
+                            item.id
+                            ? {
+                              ...text,
+                              isEditing:
+                                true,
+                            }
+                            : text
                       )
                     )
                   }
-
-                  onTouchStart={() =>
-                    setTexts((prev) =>
-                      prev.map((text) =>
-                        text.id === item.id
-                          ? {
-                            ...text,
-                            isEditing: true,
-                          }
-                          : text
-                      )
-                    )
-                  }
-
                   className="
                     px-3 py-2
-                    rounded-xl
                     font-semibold
-                    text-lg
                     whitespace-pre-wrap
                     cursor-text
                   "
-
                   style={{
+                    fontFamily:
+                      "Arial",
+
+                    lineHeight: "1.4",
+
+                    fontSize: `${item.fontSize}px`,
+
                     color:
                       boardColor ===
                         "#ffffff"
@@ -770,18 +921,20 @@ const CanvasBoard = forwardRef(
                         null
                       );
                     }}
-
                     className="
-                    absolute
-                    -top-3
-                    -right-3
-                    w-6
-                    h-6
-                    rounded-full
-                    bg-red-500
-                    text-white
-                    text-xs
-                  "
+                      absolute
+                      -top-3
+                      -right-3
+                      w-8
+                      h-8
+                      rounded-full
+                      bg-red-500
+                      text-white
+                      text-xs
+                      flex
+                      items-center
+                      justify-center
+                    "
                   >
                     ✕
                   </button>
@@ -797,7 +950,7 @@ const CanvasBoard = forwardRef(
                 pointer-events-none
                 rounded-full
                 border
-                z-50
+                z-40
                 transition-all
                 duration-75
               "
@@ -816,12 +969,6 @@ const CanvasBoard = forwardRef(
 
                 transform:
                   "translate(-50%, -50%)",
-
-                boxShadow:
-                  boardColor ===
-                    "#ffffff"
-                    ? "0 0 0 1px rgba(0,0,0,0.2)"
-                    : "0 0 0 1px rgba(255,255,255,0.2)",
 
                 borderColor:
                   boardColor ===
@@ -857,6 +1004,7 @@ const CanvasBoard = forwardRef(
               hover:scale-105
               transition-all
               duration-300
+              z-50
             "
           >
             Save PNG
