@@ -826,8 +826,7 @@ const CanvasBoard = forwardRef(
                   style={{
                     height: "auto",
 
-                    fontFamily:
-                      "Arial",
+                    fontFamily: "'Caveat', cursive",
 
                     lineHeight: "1.4",
 
